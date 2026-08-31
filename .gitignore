@@ -1,0 +1,9 @@
+*.swp
+.DS_Store
+node_modules/
+dist/
+*.log
+*.sock
+*.sock.pid
+backups/
+.local/state/

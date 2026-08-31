@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "local.dock",
+  "name": "Dock",
+  "version": "2.0.0",
+  "author": "amartin",
+  "description": "Theme-aware Tahoe-style dock with magnification, restore, launch/focus, and running indicators",
+  "kinds": [
+    "panel"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "panel": "Dock.qml"
+  }
+}

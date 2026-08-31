@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "amartin.mouse-mapper",
+  "name": "Mouse Mapper",
+  "version": "1.0.0",
+  "author": "amartin",
+  "description": "Map MX Master 3 buttons to system actions",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "MouseMapper.qml"
+  }
+}

@@ -1,0 +1,10 @@
+affinity-appimage-bin
+appimagelauncher
+brave-bin
+davinci-convert
+davinci-convert-debug
+davinci-ffmpeg-encoder-plugin
+davinci-ffmpeg-encoder-plugin-debug
+davinci-resolve
+editt-bin
+todoist-appimage

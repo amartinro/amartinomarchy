@@ -1,0 +1,58 @@
+{
+  "apps": [
+    {
+      "id": "org.gnome.Nautilus",
+      "icon": "org.gnome.Nautilus",
+      "match": [
+        "org.gnome.Nautilus"
+      ]
+    },
+    {
+      "id": "brave-browser",
+      "name": "Brave",
+      "icon": "brave-desktop"
+    },
+    {
+      "id": "org.mozilla.Thunderbird",
+      "icon": "org.mozilla.Thunderbird",
+      "match": [
+        "org.mozilla.Thunderbird"
+      ]
+    },
+    {
+      "id": "code",
+      "name": "Visual Studio Code",
+      "icon": "vscode"
+    },
+    {
+      "id": "com.mitchellh.ghostty",
+      "name": "Ghostty",
+      "icon": "com.mitchellh.ghostty"
+    },
+    {
+      "id": "WhatsApp",
+      "icon": "whatsapp"
+    },
+    {
+      "id": "org.telegram.desktop",
+      "icon": "org.telegram.desktop",
+      "match": [
+        "org.telegram.desktop"
+      ]
+    },
+    {
+      "id": "bitwarden",
+      "icon": "bitwarden",
+      "match": [
+        "Bitwarden"
+      ]
+    },
+    {
+      "id": "DaVinciResolve",
+      "icon": "davinci-resolve",
+      "match": [
+        "resolve"
+      ]
+    }
+  ]
+}

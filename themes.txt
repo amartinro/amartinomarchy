@@ -1,0 +1,4 @@
+# name url commit
+dos-moos https://github.com/HANCORE-linux/omarchy-dos-moos-theme.git 85ed3d208130639efb033d1c5fe25d754322cee3
+hermarchy https://github.com/archer-clawbot/omarchy-hermarchy-theme 12f3c5257f87237fa3fd549cf7be3f9fba76f9c8
+noir https://github.com/tahadx/omarchy-noir-theme.git 42a6852a631066b0981aeef057c544d6b5eeb89e

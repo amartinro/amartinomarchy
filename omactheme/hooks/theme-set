@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+theme="${1:-}"
+if [[ "$theme" == "tahoe-dark" ]]; then
+  hyprpm enable hyprbars >/dev/null 2>&1 || true
+else
+  hyprpm disable hyprbars >/dev/null 2>&1 || true
+fi
+
+hyprctl reload >/dev/null 2>&1 || true
+omarchy-dock reload >/dev/null 2>&1 || true

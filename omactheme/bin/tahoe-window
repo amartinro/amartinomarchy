@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+minimize() {
+  local address
+  address="$(hyprctl -j activewindow | jq -r '.address // empty')"
+  [[ -n "$address" ]] || exit 0
+  hyprctl dispatch movetoworkspacesilent special:tahoe-minimized,address:"$address"
+}
+
+restore_app() {
+  local app_id="${1:-}"
+  [[ -n "$app_id" ]] || exit 0
+  local address
+  address="$(hyprctl -j clients | jq -r --arg app "$app_id" '
+    map(select(.workspace.name == "special:tahoe-minimized"))
+    | map(select((.class | ascii_downcase) == ($app | ascii_downcase)
+      or (.initialClass | ascii_downcase) == ($app | ascii_downcase)))
+    | first.address // empty')"
+  [[ -n "$address" ]] || exit 1
+  hyprctl dispatch movetoworkspace current,address:"$address"
+  hyprctl dispatch focuswindow address:"$address"
+}
+
+case "${1:-}" in
+  minimize) minimize ;;
+  restore-app) restore_app "${2:-}" ;;
+  *) echo "Usage: tahoe-window minimize | restore-app <app-id>" >&2; exit 2 ;;
+esac

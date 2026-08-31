@@ -1,0 +1,303 @@
+#!/bin/bash
+
+# omarchy:summary=Control the local dock (show/hide, add/remove/move apps, edit config)
+# omarchy:args=[toggle|show|hide|reload|list|edit] | add <app>... [--match <app_id>] | remove <app> | move <app> <left|right|position> | order <id1> <id2> ...
+# omarchy:examples=omarchy-dock | omarchy-dock hide | omarchy-dock list | omarchy-dock add firefox | omarchy-dock add firefox --match Navigator
+
+# The dock plugin (local.dock) watches ~/.config/omarchy/dock.json; every
+# mutation below rewrites that file and the dock picks the change up live.
+# Show/hide/reload go through the shell IPC.
+
+set -euo pipefail
+
+CONFIG="$HOME/.config/omarchy/dock.json"
+PLUGIN_ID="local.dock"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  omarchy-dock [toggle]          Show or hide the dock (default)
+  omarchy-dock show|hide         Force visible / hidden
+  omarchy-dock reload            Re-read dock.json now
+  omarchy-dock list              Print the current dock apps
+  omarchy-dock add <app>...      Add apps (desktop id or name, resolved case-insensitively)
+  omarchy-dock remove <app>      Remove an app
+  omarchy-dock move <app> <pos>  Reorder: left, right, or 0-based position
+  omarchy-dock edit              Open dock.json in $EDITOR
+
+Apps are matched against .desktop ids and names across XDG data dirs.
+EOF
+}
+
+shell_call() {
+  omarchy-shell -q shell "$@" || true
+}
+
+# ---------------------------------------------------------------- resolution
+
+desktop_dirs() {
+  local dirs="/usr/share/applications /usr/local/share/applications $HOME/.local/share/applications"
+  if [[ -n ${XDG_DATA_DIRS:-} ]]; then
+    local parts=()
+    IFS=':' read -r -a parts <<< "$XDG_DATA_DIRS"
+    for d in "${parts[@]}"; do dirs="$dirs $d/applications"; done
+  fi
+  # de-dup, keep order, one dir per line
+  printf '%s\n' $dirs | awk '!seen[$0]++'
+}
+
+# Resolve a user-supplied name/id to a desktop entry id. Prints id on success.
+# Exits 0 for any resolution (including the raw string fallback), 1 if the
+# input looks like a name that matched nothing.
+resolve_desktop_id() {
+  local want="$1"
+  local want_lc id name id_lc base
+  want_lc="$(printf '%s' "$want" | tr '[:upper:]' '[:lower:]')"
+  local exact="" name_match=""
+  while IFS= read -r dir; do
+    [[ -d $dir ]] || continue
+    for file in "$dir"/*.desktop; do
+      [[ -f $file ]] || continue
+      base="${file##*/}"
+      id="${base%.desktop}"
+      id_lc="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+      if [[ -z $exact && $id_lc == "$want_lc" ]]; then
+        exact="$id"
+      fi
+      if [[ -z $name_match ]]; then
+        name="$(grep -m1 '^Name=' "$file" 2>/dev/null | cut -d= -f2- || true)"
+        if [[ -n ${name// } && "$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')" == "$want_lc" ]]; then
+          name_match="$id"
+        fi
+      fi
+    done
+  done < <(desktop_dirs)
+  if [[ -n $exact ]]; then printf '%s' "$exact"; return 0; fi
+  if [[ -n $name_match ]]; then printf '%s' "$name_match"; return 0; fi
+  # No .desktop match: keep the raw value (custom id / label for a command).
+  printf '%s' "$want"
+}
+
+desktop_icon() {
+  local id="$1"
+  while IFS= read -r dir; do
+    [[ -f "$dir/$id.desktop" ]] || continue
+    grep -m1 '^Icon=' "$dir/$id.desktop" 2>/dev/null | cut -d= -f2- | sed -e 's/^ *//' -e 's/ *$//'
+    return 0
+  done < <(desktop_dirs)
+  return 0
+}
+
+has_desktop_file() {
+  local id="$1" dir
+  while IFS= read -r dir; do
+    [[ -f "$dir/$id.desktop" ]] && return 0
+  done < <(desktop_dirs)
+  return 1
+}
+
+# ---------------------------------------------------------------- config ops
+# All JSON work goes through one python helper: dock-config <op> [args...]
+
+dock_config() {
+  ensure_config
+  python3 - "$CONFIG" "$@" <<'PY'
+import json, os, sys
+
+path, op = sys.argv[1], sys.argv[2]
+args = sys.argv[3:]
+
+def norm(v):
+    return str(v).strip().lower().removesuffix(".desktop")
+
+def load():
+    try:
+        with open(path) as f:
+            doc = json.load(f)
+    except Exception:
+        doc = {}
+    if not isinstance(doc, dict):
+        doc = {}
+    apps = doc.get("apps")
+    if not isinstance(apps, list):
+        apps = []
+    return doc, apps
+
+def save(doc):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(doc, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, path)
+
+doc, apps = load()
+
+if op == "list":
+    for i, a in enumerate(apps):
+        label = a.get("id", "") if isinstance(a, dict) else str(a)
+        extra = f"  ({a['name']})" if isinstance(a, dict) and a.get("name") else ""
+        print(f"{i:2}  {label}{extra}")
+
+elif op == "add":
+    for want in args:
+        if any(norm(a.get("id", "") if isinstance(a, dict) else a) == norm(want) for a in apps):
+            print(f"already in dock: {want}", file=sys.stderr)
+            continue
+        entry = {"id": want}
+        if os.environ.get("DOCK_ICON"):
+            entry["icon"] = os.environ["DOCK_ICON"]
+        if os.environ.get("DOCK_MATCH"):
+            entry["match"] = [os.environ["DOCK_MATCH"]]
+        apps.append(entry)
+        print(f"added: {want}")
+    save(doc)
+
+elif op == "remove":
+    if len(args) != 1:
+        sys.exit("remove takes exactly one app")
+    want = norm(args[0])
+    kept = [a for a in apps if norm(a.get("id", "") if isinstance(a, dict) else a) != want]
+    if len(kept) == len(apps):
+        sys.exit(f"not in dock: {args[0]}")
+    print(f"removed: {args[0]}")
+    save({"apps": kept, **{k: v for k, v in doc.items() if k != "apps"}})
+
+elif op == "order":
+    if not args:
+        sys.exit("order takes the full list of app ids, in the new order")
+    by_id = {}
+    for a in apps:
+        by_id[norm(a.get("id", "") if isinstance(a, dict) else a)] = a
+    newapps = []
+    for k in args:
+        a = by_id.pop(norm(k), None)
+        if a is not None:
+            newapps.append(a)
+    # Anything not listed keeps its relative order at the end.
+    newapps.extend(by_id.values())
+    if newapps:
+        apps[:] = newapps
+        save(doc)
+    print(f"order: {len(newapps)}")
+
+elif op == "move":
+    if len(args) != 2:
+        sys.exit("move takes <app> and <left|right|position>")
+    want, pos = norm(args[0]), args[1]
+    idx = next((i for i, a in enumerate(apps) if norm(a.get("id", "") if isinstance(a, dict) else a) == want), None)
+    if idx is None:
+        sys.exit(f"not in dock: {args[0]}")
+    item = apps.pop(idx)
+    if pos == "left":
+        new = max(0, idx - 1)
+    elif pos == "right":
+        new = min(len(apps), idx)
+    else:
+        new = max(0, min(len(apps), int(pos)))
+    apps.insert(new, item)
+    print(f"moved: {args[0]} -> {pos}")
+    save(doc)
+else:
+    sys.exit(f"unknown op: {op}")
+PY
+}
+
+ensure_config() {
+  if [[ ! -f $CONFIG ]]; then
+    mkdir -p "$(dirname "$CONFIG")"
+    printf '{\n  "apps": []\n}\n' > "$CONFIG"
+  fi
+}
+
+# ---------------------------------------------------------------- commands
+
+cmd="${1:-toggle}"
+[[ $# -gt 0 ]] && shift || true
+
+case "$cmd" in
+  toggle)
+    shell_call toggle "$PLUGIN_ID" '{}'
+    ;;
+  show|summon)
+    shell_call summon "$PLUGIN_ID" '{}'
+    ;;
+  hide|close)
+    shell_call hide "$PLUGIN_ID"
+    ;;
+  reload)
+    shell_call call "$PLUGIN_ID" reload '{}'
+    ;;
+  order)
+    if [[ $# -lt 1 ]]; then
+      echo "omarchy-dock: order requires at least one app id" >&2
+      exit 2
+    fi
+    dock_config order "$@"
+    shell_call call "$PLUGIN_ID" reload '{}'
+    ;;
+  list)
+    dock_config list
+    ;;
+  edit)
+    ensure_config
+    "${EDITOR:-nano}" "$CONFIG"
+    ;;
+  add)
+    match_id=""
+    want_list=()
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --match)
+          match_id="${2-}"
+          shift 2 || true
+          ;;
+        *)
+          want_list+=("$1")
+          shift
+          ;;
+      esac
+    done
+    if [[ ${#want_list[@]} -eq 0 ]]; then
+      echo "omarchy-dock: add requires at least one app" >&2
+      exit 2
+    fi
+    for want in "${want_list[@]}"; do
+      id="$(resolve_desktop_id "$want")"
+      # When pinning from the dock (--match given) the raw id is acceptable:
+      # the match field keeps running detection working for unknown apps.
+      if [[ -z $match_id && "$id" == "$want" ]] && ! has_desktop_file "$id"; then
+        echo "omarchy-dock: no desktop entry found for '$want' (skipping)" >&2
+        continue
+      fi
+      icon="$(desktop_icon "$id" || true)"
+      DOCK_ICON="$icon" DOCK_MATCH="$match_id" dock_config add "$id"
+    done
+    shell_call call "$PLUGIN_ID" reload '{}'
+    ;;
+  remove)
+    if [[ $# -ne 1 ]]; then
+      echo "omarchy-dock: remove takes exactly one app" >&2
+      exit 2
+    fi
+    id="$(resolve_desktop_id "$1")"
+    dock_config remove "$id"
+    shell_call call "$PLUGIN_ID" reload '{}'
+    ;;
+  move)
+    if [[ $# -ne 2 ]]; then
+      echo "omarchy-dock: move takes <app> and <left|right|position>" >&2
+      exit 2
+    fi
+    id="$(resolve_desktop_id "$1")"
+    dock_config move "$id" "$2"
+    shell_call call "$PLUGIN_ID" reload '{}'
+    ;;
+  help|--help|-h)
+    usage
+    ;;
+  *)
+    echo "omarchy-dock: unknown command '$cmd'" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

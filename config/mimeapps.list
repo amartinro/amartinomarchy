@@ -1,0 +1,25 @@
+[Default Applications]
+text/html=brave-browser.desktop
+x-scheme-handler/http=brave-browser.desktop
+x-scheme-handler/https=brave-browser.desktop
+x-scheme-handler/about=brave-browser.desktop
+x-scheme-handler/unknown=brave-browser.desktop
+x-scheme-handler/mailto=userapp-Thunderbird-20C9T3.desktop
+x-scheme-handler/codex=chatgpt.desktop
+x-scheme-handler/mid=userapp-Thunderbird-20C9T3.desktop
+message/rfc822=userapp-Thunderbird-20C9T3.desktop
+x-scheme-handler/webcal=userapp-Thunderbird-08R9T3.desktop
+x-scheme-handler/webcals=userapp-Thunderbird-08R9T3.desktop
+text/calendar=userapp-Thunderbird-08R9T3.desktop
+application/x-extension-ics=userapp-Thunderbird-08R9T3.desktop
+x-scheme-handler/net.thunderbird=userapp-Thunderbird-79EDU3.desktop
+
+[Added Associations]
+x-scheme-handler/mailto=userapp-Thunderbird-20C9T3.desktop;
+x-scheme-handler/mid=userapp-Thunderbird-20C9T3.desktop;
+message/rfc822=userapp-Thunderbird-20C9T3.desktop;
+x-scheme-handler/webcal=userapp-Thunderbird-08R9T3.desktop;
+x-scheme-handler/webcals=userapp-Thunderbird-08R9T3.desktop;
+text/calendar=userapp-Thunderbird-08R9T3.desktop;
+application/x-extension-ics=userapp-Thunderbird-08R9T3.desktop;
+x-scheme-handler/net.thunderbird=userapp-Thunderbird-79EDU3.desktop;
