@@ -38,7 +38,7 @@ Con esto se puede restaurar la configuración completa en otra máquina.
 Requisitos: Omarchy instalado y actualizado, `yay` disponible.
 
 ```bash
-git clone <este-repo> ~/Projects/amartinomarchy
+git clone https://github.com/amartinro/amartinomarchy ~/Projects/amartinomarchy
 cd ~/Projects/amartinomarchy
 ./install.sh
 ```
