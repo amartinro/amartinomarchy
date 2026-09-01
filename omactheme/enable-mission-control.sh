@@ -30,6 +30,14 @@ if ! grep -q 'require("hypr.mission-control")' "$MAIN"; then
   printf '\n-- Tahoe Mission Control (installed by omactheme).\nrequire("hypr.mission-control")\n' >> "$MAIN"
 fi
 
+# Ensure hyprpm plugins (hymission, hyprbars) are loaded on every Hyprland start.
+# Without this, the plugins only load for the current session and the
+# plugin.* config keys error out after every reboot.
+AUTOSTART="$HOME/.config/hypr/autostart.lua"
+if ! grep -q 'o.exec_on_start("hyprpm reload")' "$AUTOSTART" 2>/dev/null; then
+  printf '\n-- Load hyprpm plugins (hyprbars, hymission) on every Hyprland start.\no.exec_on_start("hyprpm reload")\n' >> "$AUTOSTART"
+fi
+
 hyprctl reload
 errors="$(hyprctl configerrors)"
 if [[ -n "${errors//[[:space:]]/}" ]]; then
