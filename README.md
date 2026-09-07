@@ -34,6 +34,31 @@ Con esto se puede restaurar la configuración completa en otra máquina.
 - **dos-moos, hermarchy, noir**: repos git externos ya en GitHub; ver `themes.md`.
   El instalador los clona en `~/.config/omarchy/themes/`.
 
+## Mantener el backup al día
+
+El repo es un **espejo manual**: `./sync.sh` copia desde la máquina, enseña el
+diff y commitea.
+
+```bash
+cd ~/Projects/amartinomarchy
+./sync.sh              # copiar + diff + pregunta antes de commitear
+./sync.sh -n           # dry-run: solo dice qué cambiaría
+./sync.sh --yes --push # sin preguntas y envía a GitHub
+./sync.sh --watch ~/.config/hypr/extra   # sitios extra donde buscar ficheros nuevos
+```
+
+Qué descarta al añadir ficheros nuevos (por defecto solo busca en
+`~/.config/omarchy`, `~/.config/hypr` y `~/.local/bin`): symlinks, shims de
+mise, binarios, ficheros de más de 1 MiB, `*.sample`, `backgrounds/`,
+`themes/`, cachés y lo que ya esté en el repo con otro nombre. Y tiene un freno
+de secretos: no mete nada cuyo nombre o contenido parezca una credencial
+(`ghp_`/`gho_`/`github_pat_`, claves privadas, tokens de Slack o AWS) — los lista
+para que decidas a mano.
+
+Los symlinks que ya hay en el repo (`config/nvim/lua/plugins/theme.lua`,
+`config/btop/themes/current.theme`) apuntan a estado de la máquina y **no se
+tocan**.
+
 ## Restaurar en otra máquina
 
 Requisitos: Omarchy instalado y actualizado, `yay` disponible.
