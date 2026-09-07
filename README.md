@@ -12,6 +12,7 @@ Con esto se puede restaurar la configuración completa en otra máquina.
 | `config/omarchy/plugins/amartin.mouse-mapper/` | — | App para mapear botones del Logitech MX Master 3 (overlay + `mxmouse-events.py`) |
 | `config/omarchy/plugins/amartin.monitor/` | — | Widget de brillo/pantalla (clonado de `omarchy.monitor`) |
 | `config/omarchy/plugins/dock/` | — | Dock estilo Tahoe con magnificación (también lo instala `omactheme`) |
+| `config/omarchy/plugins/amartin.kairos/` | — | Widget de barra con GPU, RAM (GiB) y tok/s de vllmcritic leídos de Kairos Dash en la máquina remota; panel emergente con los colores del tema. Su `README.md` trae ajustes y detalles de implementación |
 | `config/omarchy/bar/modules/system-monitor.qml` | — | Módulo QML del bar (monitor de sistema) |
 | `config/omarchy/hooks/` | — | Hooks: theme-set (tahoe-dark), post-update (voxtype, agent, fingerprint) |
 | `omactheme/` | `~/Projects/omactheme` | Proyecto del tema **tahoe-dark**: instalador, tema, dock, `tahoe-window`, `omarchy-dock`, mission control |

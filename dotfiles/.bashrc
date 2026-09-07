@@ -15,3 +15,6 @@ source "$OMARCHY_PATH/default/bash/rc"
 
 # Launch deepseek harness in the background (terminal stays free)
 alias dsh-web='npx @deepseek-ai/dsh web >/dev/null 2>&1 &'
+
+alias ll='ls -la'
+alias l='ls -l'

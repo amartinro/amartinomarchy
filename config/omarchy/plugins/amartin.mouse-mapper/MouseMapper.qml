@@ -14,6 +14,7 @@ Item {
   property var manifest: null
 
   property bool opened: false
+  property bool closingFromHost: false
   property var device: ({ connected: false, path: "", buttons: [] })
   property var mappings: ({})     // code(string) -> command
   property var selection: ({})    // code(string) -> dropdown value ("__custom__" or preset)
@@ -36,8 +37,10 @@ Item {
   readonly property string mouseLua: home + "/.config/hypr/mouse.lua"
 
   // ------------------------------------------------------------------ theme
-  // Shares the [menu] surface tokens — themes that style the menu also
-  // style this overlay.
+  // The window is a normal Hyprland-decorated surface (title bar + buttons
+  // from the active theme), so it uses an opaque window background instead
+  // of the translucent menu wash.
+  property color windowBackground: Util.alpha(Color.menu.background, 1.0)
   property color background: Color.menu.background
   property color foreground: Color.menu.text
   property color border: Color.menu.border
@@ -46,8 +49,11 @@ Item {
   readonly property int cornerRadius: Style.cornerRadius
   property string fontFamily: Style.font.menuFamily
   readonly property int contentMargin: Style.space(22)
-  readonly property int cardWidth: Math.min(Style.space(620), panel.width - Style.gapsOut * 2)
-  readonly property int contentWidth: cardWidth - contentMargin * 2
+  readonly property int windowWidth: Style.space(620)
+  readonly property int windowHeight: Style.space(680)
+  readonly property int minWindowWidth: Style.space(540)
+  readonly property int minWindowHeight: Style.space(420)
+  property int contentWidth: window.width - contentMargin * 2
 
   // ------------------------------------------------------------------ data
   readonly property var buttonDefs: [
@@ -291,18 +297,23 @@ Item {
     root.livePressed = []
     root.loadMappings()
     root.refreshDevice()
+    window.visible = true
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
   function close() {
+    root.closingFromHost = true
     root.opened = false
+    root.stopEvents()
+    window.visible = false
+    root.closingFromHost = false
   }
 
   function dismiss() {
-    root.opened = false
-    root.stopEvents()
     if (root.shell && typeof root.shell.hide === "function")
       root.shell.hide((root.manifest && root.manifest.id) || "amartin.mouse-mapper")
+    else
+      root.close()
   }
 
   function toggle() {
@@ -398,60 +409,47 @@ Item {
   }
 
   // ------------------------------------------------------------------ ui
-  PanelWindow {
-    id: panel
-    visible: root.opened
-    anchors { top: true; bottom: true; left: true; right: true }
-    color: "transparent"
-    WlrLayershell.namespace: "amartin-mouse-mapper"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    exclusionMode: ExclusionMode.Ignore
+  // A normal window: Hyprland (via the active theme's hyprbars) draws the
+  // title bar and traffic-light buttons, so this reads like any other app.
+  FloatingWindow {
+    id: window
+    title: "Mouse Mapper"
+    visible: false
+    color: root.windowBackground
+    implicitWidth: 620
+    implicitHeight: 680
+    minimumSize: Qt.size(540, 420)
 
-    Rectangle {
-      anchors.fill: parent
-      color: root.scrim
+    onVisibleChanged: {
+      // The red close button hides the window without going through
+      // close(); tell the shell so its open state stays consistent.
+      if (!visible && !root.closingFromHost && root.shell && typeof root.shell.hide === "function")
+        root.shell.hide((root.manifest && root.manifest.id) || "amartin.mouse-mapper")
     }
 
-    MouseArea {
+    Item {
+      id: keyCatcher
       anchors.fill: parent
-      onClicked: root.dismiss()
-    }
+      focus: true
 
-    BorderSurface {
-      id: card
-      width: root.cardWidth
-      // Grows with the content so nothing ever overflows, capped to the
-      // screen. The custom-command field adds a row without resizing the card.
-      height: Math.min(contentColumn.implicitHeight + root.contentMargin * 2, panel.height - Style.gapsOut * 2)
-      radius: root.cornerRadius
-      anchors.centerIn: parent
-      color: root.background
-      borderSpec: root.borderSpec
-      padding: root.contentMargin
-
-      MouseArea { anchors.fill: parent; onClicked: {} }
-
-      Item {
-        id: keyCatcher
-        anchors.fill: parent
-        focus: true
-
-        Keys.priority: Keys.BeforeItem
-        Keys.onPressed: function(event) {
-          if (event.key === Qt.Key_Escape) {
-            root.dismiss()
-            event.accepted = true
-          }
+      Keys.priority: Keys.BeforeItem
+      Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Escape) {
+          root.dismiss()
+          event.accepted = true
         }
       }
+    }
+
+    ScrollView {
+      id: scrollArea
+      anchors.fill: parent
+      anchors.margins: root.contentMargin
+      clip: true
+      ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
       Column {
         id: contentColumn
-        anchors {
-          left: parent.left; right: parent.right; top: parent.top
-          leftMargin: root.contentMargin; rightMargin: root.contentMargin; topMargin: root.contentMargin
-        }
         width: root.contentWidth
         spacing: Style.space(14)
 

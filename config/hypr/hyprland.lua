@@ -41,6 +41,12 @@ o.window(
   { float = true, center = true, size = { "(monitor_w*0.6)", "(monitor_h*0.6)" } }
 )
 
+-- Mouse Mapper (MX Master 3 button mapping): floating, centered settings window.
+o.window({ title = "Mouse Mapper" }, { float = true, center = true, size = { 620, 680 } })
+
+-- Bitwarden: open a bit larger than the default 875x600 floating size.
+o.window("^(Bitwarden)$", { size = { 1000, 750 } })
+
 -- Tahoe Dark post-user look overrides (installed by omactheme).
 require("hypr.tahoe-overrides")
 

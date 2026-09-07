@@ -64,14 +64,44 @@ Item {
 
   readonly property string cpuLabel: sampled ? Math.round(cpuPercent) + "%" : "--"
   readonly property string memLabel: memTotalGiB > 0 ? memUsedGiB.toFixed(1) + "G" : "--"
-  readonly property string netLabel: "\uF063" + " " + (sampled ? compactRate(netRxPerSec) : "--")
-    + "  " + "\uF062" + " " + (sampled ? compactRate(netTxPerSec) : "--")
+  // Both rates are padded to four glyphs, so this string always measures the
+  // same number of characters and the chip never grows or shrinks.
+  readonly property string netLabel: "\uF063 " + pad(sampled ? compactRate(netRxPerSec) : "--", 4)
+    + "  \uF062 " + pad(sampled ? compactRate(netTxPerSec) : "--", 4)
+
+  // Reserved glyph counts per chip: icon + space + value. Used as fixedWidth so
+  // the bar stops shifting when a value goes from two digits to three.
+  readonly property int cpuChars: 6
+  readonly property int memChars: 7
+  readonly property int netChars: 14
 
   readonly property string cpuTooltip: "CPU " + cpuLabel + (cpuCoreCount > 0 ? " · " + cpuCoreCount + " cores" : "")
   readonly property string memTooltip: memTotalGiB > 0
     ? "RAM " + memUsedGiB.toFixed(1) + " / " + memTotalGiB.toFixed(1) + " GiB (" + Math.round(memPercent) + "%)"
     : "RAM"
   readonly property string netTooltip: "Net \u2193" + humanize(netRxPerSec) + "/s \u00B7 \u2191" + humanize(netTxPerSec) + "/s"
+
+  // Advance of one glyph of the bar's monospace font (average of four, to stay
+  // exact even if a theme ever swaps in a proportional font).
+  readonly property real glyph: chipMetrics.advanceWidth / 4
+
+  // The bar font is monospace, so trailing spaces are exactly as wide as digits.
+  function pad(value, chars) {
+    var text = String(value)
+    while (text.length < chars) text += " "
+    return text
+  }
+
+  function chipWidth(chars) {
+    return Math.round(root.glyph * chars + Style.spaceReal(6) * 2)
+  }
+
+  TextMetrics {
+    id: chipMetrics
+    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+    font.pixelSize: Style.font.body
+    text: "0000"
+  }
 
   Process {
     id: sampleProc
@@ -185,10 +215,12 @@ Item {
     property string chipValue: ""
     property string chipTooltip: ""
     property bool alarming: false
+    property int chars: 0
 
     bar: root.bar
     text: root.vertical ? (chipVerticalIcon !== "" ? chipVerticalIcon : chipIcon)
       : chipIcon + (chipValue !== "" ? " " + chipValue : "")
+    fixedWidth: root.vertical || chars === 0 ? -1 : root.chipWidth(chars)
     tooltipText: chipTooltip
     active: alarming
     horizontalMargin: 6
@@ -207,22 +239,25 @@ Item {
 
     MonitorChip {
       chipIcon: "\uF4BC"
-      chipValue: root.cpuLabel
+      chipValue: root.pad(root.cpuLabel, 4)
       chipTooltip: root.cpuTooltip
       alarming: root.cpuPercent >= 85
+      chars: root.cpuChars
     }
 
     MonitorChip {
       chipIcon: "\uDB80\uDF5B"
-      chipValue: root.memLabel
+      chipValue: root.pad(root.memLabel, 5)
       chipTooltip: root.memTooltip
       alarming: root.memPercent >= 90
+      chars: root.memChars
     }
 
     MonitorChip {
       chipIcon: ""
       chipValue: root.netLabel
       chipTooltip: root.netTooltip
+      chars: root.netChars
     }
   }
 

@@ -28,3 +28,9 @@
 	autoupdate = true        # Apply stored conflict resolutions automatically
 [user]
 	email = a.martinro@gmail.com
+[credential "https://github.com"]
+	helper = 
+	helper = !/home/amartin/.local/share/mise/installs/gh/2.98.0/gh_2.98.0_linux_amd64/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/home/amartin/.local/share/mise/installs/gh/2.98.0/gh_2.98.0_linux_amd64/bin/gh auth git-credential

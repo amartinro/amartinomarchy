@@ -8,15 +8,22 @@
       ]
     },
     {
+      "id": "org.mozilla.Thunderbird",
+      "icon": "org.mozilla.Thunderbird",
+      "match": [
+        "org.mozilla.Thunderbird"
+      ]
+    },
+    {
       "id": "brave-browser",
       "name": "Brave",
       "icon": "brave-desktop"
     },
     {
-      "id": "org.mozilla.Thunderbird",
-      "icon": "org.mozilla.Thunderbird",
+      "id": "todoist",
+      "icon": "todoist",
       "match": [
-        "org.mozilla.Thunderbird"
+        "todoist"
       ]
     },
     {
